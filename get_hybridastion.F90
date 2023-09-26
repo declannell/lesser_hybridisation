@@ -2,53 +2,56 @@ PROGRAM ComplexMatrixExample
     IMPLICIT NONE
 
     integer, parameter :: dp = selected_real_kind(15, 307)
-    integer, parameter :: steps = 200     ! Update with the desired number of steps
-    integer :: i 
-    integer :: j
+    integer, parameter :: steps = 3     ! Update with the desired number of steps
+    integer :: i, j, r 
+    !integer :: j
   
     INTEGER, PARAMETER :: num_orbitals = 2
-    COMPLEX(8), ALLOCATABLE :: A(:,:), b(:, :), c(:, :)
+    COMPLEX(8), ALLOCATABLE :: A(:, :,:), b(:, :, :), c(:, :, :)
 
     !do i = 0, 3
     !    write(*, *) i
     !end do
 
     ! Allocate memory for the complex matrix
-    ALLOCATE(A(num_orbitals, num_orbitals))
-    ALLOCATE(b(num_orbitals, num_orbitals))
-    ALLOCATE(c(num_orbitals, num_orbitals))
+    ALLOCATE(A(steps, num_orbitals, num_orbitals))
+    ALLOCATE(b(steps, num_orbitals, num_orbitals))
+    ALLOCATE(c(steps, num_orbitals, num_orbitals))
 
 
-
-    do i = 1, num_orbitals 
-        do j = 1, num_orbitals 
-          A(i, j) = CMPLX(REAL(i) + REAL(j), REAL(i) - REAL(j), 8) ! Create a complex number
-          if (i == j) THEN
-            b(i, j) = CMPLX(1, 0, 8)
-          else
-            b(i, j) = CMPLX(0, 1)
-          end if
-          write(*, *) A(i, j), b(i, j), i, j 
+    do r = 1, steps
+        do i = 1, num_orbitals 
+            do j = 1, num_orbitals 
+              A(r, i, j) = CMPLX(REAL(i) + REAL(j), REAL(i) - REAL(j), 8) ! Create a complex number
+              if (i == j) THEN
+                b(r, i, j) = CMPLX(r, 0, 8)
+              else
+                b(r, i, j) = CMPLX(0, r)
+              end if
+              write(*, *) A(r, i, j), b(r, i, j), i, j 
+            end do
         end do
+        WRITE(*, '(A)', ADVANCE='YES') 
     end do
+
     print *, "multipying the matrices now"
-    c = MATMUL(A, b)
-
-    do i = 1, num_orbitals
-        do j = 1, num_orbitals
-            write(*, *) c(i, j), i , j
-        end do
+    do r = 1, steps
+        c(r,:,:) = MATMUL(A(r,:,:), b(r,:,:))
     end do
-            
-    DEALLOCATE(A)
-    DEALLOCATE(b)
-    DEALLOCATE(c)
 
+    do r = 1, steps
+        do i = 1, num_orbitals
+            do j = 1, num_orbitals
+                write(*, *) c(r, i, j), i , j
+            end do
+        end do
+        WRITE(*, '(A)', ADVANCE='YES')
+    end do
 
-  
-
+    DEALLOCATE(A, b, c)
 
   END PROGRAM ComplexMatrixExample
+  
   
 
 
