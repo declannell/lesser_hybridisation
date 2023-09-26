@@ -3,49 +3,56 @@ PROGRAM ComplexMatrixExample
 
     integer, parameter :: dp = selected_real_kind(15, 307)
     integer, parameter :: steps = 3     ! Update with the desired number of steps
-    integer :: i, j, r 
+    integer :: i, j, r, spin
     !integer :: j
   
     INTEGER, PARAMETER :: num_orbitals = 2
-    COMPLEX(8), ALLOCATABLE :: A(:, :,:), b(:, :, :), c(:, :, :)
+    COMPLEX(8), ALLOCATABLE :: A(:, :, :,:), b(:, :, :, :), c(:, :, :, :)
 
     !do i = 0, 3
     !    write(*, *) i
     !end do
 
     ! Allocate memory for the complex matrix
-    ALLOCATE(A(steps, num_orbitals, num_orbitals))
-    ALLOCATE(b(steps, num_orbitals, num_orbitals))
-    ALLOCATE(c(steps, num_orbitals, num_orbitals))
+    ALLOCATE(A(steps, 2, num_orbitals, num_orbitals))
+    ALLOCATE(b(steps, 2, num_orbitals, num_orbitals))
+    ALLOCATE(c(steps, 2, num_orbitals, num_orbitals))
 
 
     do r = 1, steps
-        do i = 1, num_orbitals 
-            do j = 1, num_orbitals 
-              A(r, i, j) = CMPLX(REAL(i) + REAL(j), REAL(i) - REAL(j), 8) ! Create a complex number
-              if (i == j) THEN
-                b(r, i, j) = CMPLX(r, 0, 8)
-              else
-                b(r, i, j) = CMPLX(0, r)
-              end if
-              write(*, *) A(r, i, j), b(r, i, j), i, j 
+        do spin = 1, 2
+            do i = 1, num_orbitals 
+                do j = 1, num_orbitals 
+                  A(r, spin, i, j) = CMPLX(REAL(i) + REAL(j), REAL(i) - REAL(j), 8) ! Create a complex number
+                  if (i == j) THEN
+                    b(r, spin, i, j) = CMPLX(r, 0, 8)
+                  else
+                    b(r, spin, i, j) = CMPLX(0, r)
+                  end if
+                  write(*, *) A(r, spin, i, j), b(r, spin, i, j), i, j 
+                end do
             end do
-        end do
-        WRITE(*, '(A)', ADVANCE='YES') 
+            print *, "the spin is " , spin, "the steps is ", r
+            WRITE(*, '(A)', ADVANCE='YES') 
+        end do    
     end do
 
     print *, "multipying the matrices now"
     do r = 1, steps
-        c(r,:,:) = MATMUL(A(r,:,:), b(r,:,:))
+        do spin = 1, 2
+            c(r, spin, :,:) = MATMUL(A(r, spin, :,:), b(r, spin, :,:))
+        end do
     end do
 
     do r = 1, steps
-        do i = 1, num_orbitals
-            do j = 1, num_orbitals
-                write(*, *) c(r, i, j), i , j
+        do spin = 1, 2
+            do i = 1, num_orbitals
+                do j = 1, num_orbitals
+                    write(*, *) c(r, spin, i, j), i , j
+                end do
             end do
+            WRITE(*, '(A)', ADVANCE='YES')
         end do
-        WRITE(*, '(A)', ADVANCE='YES')
     end do
 
     DEALLOCATE(A, b, c)
