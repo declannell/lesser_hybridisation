@@ -6,12 +6,13 @@
     integer, parameter :: steps = 200     ! Update with the desired number of steps    
     INTEGER, PARAMETER :: num_orbitals = 2
 
-    COMPLEX(8), ALLOCATABLE :: gf_retarded(:, :, :,:), gf_lesser(:, :, :, :), se_lesser(:, :, :, :)
+    COMPLEX(8), ALLOCATABLE :: gf_retarded(:, :, :,:), gf_lesser(:, :, :, :), se_lesser(:, :, :, :), lesser_hybridisation(:,:,:,:)
   
     ! Allocate memory for the complex matrix
     ALLOCATE(gf_retarded(steps, 2, num_orbitals, num_orbitals))
     ALLOCATE(gf_lesser(steps, 2, num_orbitals, num_orbitals))
     ALLOCATE(se_lesser(steps, 2, num_orbitals, num_orbitals))
+    ALLOCATE(lesser_hybridisation(steps, 2, num_orbitals, num_orbitals))
   
     !call initialize_mat(a, b, steps, num_orbitals)
     !call multiple_mat(c, a, b, steps)
@@ -20,11 +21,14 @@
     call ReadDataFromFile("gf_lesser_", gf_lesser, num_orbitals)
     call ReadDataFromFile("se_lesser_", se_lesser, num_orbitals)
 
+    call get_lesser_hybridisation(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, num_orbitals, steps)
     
-    DEALLOCATE(gf_retarded, gf_lesser, se_lesser)
+    DEALLOCATE(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation)
   END PROGRAM ComplexMatrixExample
   
-  
+
+
+
 
 
 !program main
