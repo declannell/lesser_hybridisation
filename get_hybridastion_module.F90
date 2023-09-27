@@ -5,23 +5,22 @@ MODULE MyModule
         IMPLICIT NONE
         INTEGER :: i, j, r, spin 
         INTEGER, INTENT(IN) :: steps, num_orbitals
-        COMPLEX*16, INTENT(IN) :: gf_retarded(:,:,:,:), gf_lesser(:,:,:,:), se_lesser(:,:,:,:)
-        COMPLEX*16, INTENT(OUT) :: lesser_hybridisation(:,:,:,:)
+        COMPLEX*16, INTENT(IN) :: gf_lesser(:,:,:,:), se_lesser(:,:,:,:)
+        COMPLEX*16, INTENT(INOUT) :: lesser_hybridisation(:,:,:,:), gf_retarded(:,:,:,:)
         COMPLEX*16, ALLOCATABLE :: gf_adv(:,:)
         ALLOCATE(gf_adv(num_orbitals, num_orbitals))
         
         do r = 1, steps
             do spin = 1, 2
-                ! Query the optimal workspace size for each iteration
+                !this is calculating the adjoint of gf_retarded
                 call ComputeAdjoint(gf_retarded(r,spin, :,:), gf_adv, num_orbitals)
+                
+                !this overwrites gf_adv and gf_retarded as their inverse
+                call invert_matrix(num_orbitals, gf_adv)
+                call invert_matrix(num_orbitals, gf_retarded(r, spin, :,:))
 
-                if (r == 1 .and. spin == 1) then
-                    do i =1, num_orbitals
-                        do j = 1, num_orbitals
-                            write(*, *) gf_retarded(r,spin, i,j), gf_adv(i,j), i, j
-                        end do
-                    end do
-                end if
+                lesser_hybridisation(r, spin, :, :) = matmul(gf_retarded(r, spin, :, :),&
+                     matmul(gf_lesser(r, spin, :, :) , gf_adv)) - se_lesser(r, spin, :, :)
             end do
         end do
 
@@ -34,7 +33,8 @@ MODULE MyModule
         CHARACTER(50) :: filename_complete
         INTEGER, INTENT(IN) :: num_orbitals
         COMPLEX*16, INTENT(OUT) :: A(:,:,:,:)
-        real(8) :: energy, real_part, imag_part
+        !real (8), INTENT(out) :: energy(:)
+        real(8) energy, real_part, imag_part
         INTEGER :: i, j, r = 1, ios
         LOGICAL :: end_of_file
       
@@ -70,7 +70,35 @@ MODULE MyModule
 
 
 
+    subroutine invert_matrix(M, A)
+        implicit none
+        integer, intent(in) :: M
+        complex*16, intent(inout), dimension(M, M) :: A
+        complex*16, allocatable, dimension(:) :: WORK
+        integer, allocatable, dimension(:) :: IPIV
+        integer i, j, info, error
     
+        allocate(WORK(M), IPIV(M), stat=error)
+        if (error /= 0) then
+          print *, "error: not enough memory"
+          return
+        end if
+    
+        call ZGETRF(M, M, A, M, IPIV, info)
+        if (info /= 0) then
+          write(*,*) "LU factorization failed"
+        end if
+    
+        call ZGETRI(M, A, M, IPIV, WORK, M, info)
+        if (info /= 0) then
+          write(*,*) "Matrix inversion failed"
+        end if
+    
+        deallocate(IPIV, WORK, stat=error)
+      end subroutine invert_matrix
+
+    
+
     SUBROUTINE ComputeAdjoint(A, AdjA, N)
         IMPLICIT NONE
         INTEGER, INTENT(IN) :: N
@@ -85,6 +113,34 @@ MODULE MyModule
             END DO
         END DO
     END SUBROUTINE ComputeAdjoint
+
+
+    SUBROUTINE WriteToFile(filename, object, num_orbitals, steps)
+        IMPLICIT NONE
+        CHARACTER(LEN=*), INTENT(IN) :: filename
+        INTEGER, INTENT(IN) :: num_orbitals, steps
+        COMPLEX*16, INTENT(IN) :: object(:,:,:,:)
+        !real (8), INTENT(in) :: energy(:)
+        INTEGER :: i, j, r
+        CHARACTER(50) :: filename_complete
+        
+
+        do i = 1, num_orbitals
+            do j = 1, num_orbitals
+                WRITE(filename_complete, '(A,I0,A,I0,A)') filename, i-1, '_', j-1, '_fortran.dat'
+                print *, filename_complete
+                OPEN(10, FILE=filename_complete, STATUS='OLD', ACTION='READ')
+                DO r = 1, steps
+                    WRITE(10, *) real(object(r, 1, i, j)), &
+                                             AIMAG(object(r, 2, i, j))
+                END DO
+            END DO
+        END DO
+    
+        ! Close the file
+        CLOSE(10)
+    END SUBROUTINE
+    
 
 
   END MODULE MyModule
