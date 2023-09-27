@@ -1,11 +1,39 @@
 MODULE MyModule
     CONTAINS
+
+    SUBROUTINE get_lesser_hybridisation(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, num_orbitals, steps)
+        IMPLICIT NONE
+        INTEGER :: i, j, r, spin 
+        INTEGER, INTENT(IN) :: steps, num_orbitals
+        COMPLEX*16, INTENT(IN) :: gf_retarded(:,:,:,:), gf_lesser(:,:,:,:), se_lesser(:,:,:,:)
+        COMPLEX*16, INTENT(OUT) :: lesser_hybridisation(:,:,:,:)
+        COMPLEX*16, ALLOCATABLE :: gf_adv(:,:)
+        ALLOCATE(gf_adv(num_orbitals, num_orbitals))
+        
+        do r = 1, steps
+            do spin = 1, 2
+                ! Query the optimal workspace size for each iteration
+                call ComputeAdjoint(gf_retarded(r,spin, :,:), gf_adv, num_orbitals)
+
+                if (r == 1 .and. spin == 1) then
+                    do i =1, num_orbitals
+                        do j = 1, num_orbitals
+                            write(*, *) gf_retarded(r,spin, i,j), gf_adv(i,j), i, j
+                        end do
+                    end do
+                end if
+            end do
+        end do
+
+    END SUBROUTINE get_lesser_hybridisation
+
+
     SUBROUTINE ReadDataFromFile(filename, A, num_orbitals)
         IMPLICIT NONE
         CHARACTER(LEN=*), INTENT(IN) :: filename
         CHARACTER(50) :: filename_complete
         INTEGER, INTENT(IN) :: num_orbitals
-        complex(8), INTENT(OUT) :: A(:,:,:,:)
+        COMPLEX*16, INTENT(OUT) :: A(:,:,:,:)
         real(8) :: energy, real_part, imag_part
         INTEGER :: i, j, r = 1, ios
         LOGICAL :: end_of_file
@@ -26,8 +54,11 @@ MODULE MyModule
                     END IF
                     A(r, 1, i, j) = CMPLX(real_part, imag_part, 8)
                     A(r, 2, i, j) = CMPLX(real_part, imag_part, 8)
-                    !PRINT *, "Energy:", energy, "Real:", real_part, "Imag:", imag_part, "r: ", r,&
-                    !   "A(r, 1, i, j): ", A(r, 1, i, j)
+                    if (r == 1 .and. filename == "gf_retarded_") then
+                        PRINT *, "Energy:", energy, "Real:", real_part, "Imag:", imag_part, "r: ", r,&
+                            "A(r, 1, i, j): ", A(r, 1, i, j)
+                    end if
+ 
                     r = r + 1
                 END DO
             
@@ -38,57 +69,25 @@ MODULE MyModule
       END SUBROUTINE ReadDataFromFile  
 
 
-    !  SUBROUTINE get_lesser_hybridisation(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, num_orbitals, steps)
-    !    IMPLICIT NONE
-    !    
-    !    ! Define array dimensions
-    !    INTEGER, INTENT(IN) :: steps, num_orbitals
-    !    COMPLEX(8), INTENT(IN) :: gf_retarded(:,:,:,:),  gf_lesser(:,:,:,:), se_lesser(:,:,:,:)
-    !    COMPLEX(8), INTENT(OUT) :: lesser_hybridisation(:,:,:,:)
-  !  
-    !    ! Local variables
-    !    INTEGER :: info, r, spin
-    !    INTEGER, ALLOCATABLE :: ipiv(:)
-    !    COMPLEX(8), ALLOCATABLE :: WORK(:)
-    !    INTEGER :: LWORK  ! Local variable for workspace size
-  !  
-    !    ! Allocate memory for work arrays
-    !    ALLOCATE(ipiv(num_orbitals))
-  !  
-    !    do r = 1, steps
-    !        do spin = 1, 2
-    !            ! Query the optimal workspace size for each iteration
-    !            LWORK = -1
-    !            print *, "calling zgetri "
-    !            CALL zgetri(num_orbitals, gf_retarded(r, spin, :, :), num_orbitals, ipiv, WORK, LWORK, INFO)
-    !            LWORK = WORK(1)
-    !            print *, LWORK
-    !            ALLOCATE(WORK(LWORK))
-    !            
-    !            ! Perform matrix inversion
-    !            CALL zgetri(num_orbitals, gf_retarded(r, spin, :, :), num_orbitals, ipiv, WORK, LWORK, INFO)
-  !  
-    !            ! Deallocate workspace
-    !            DEALLOCATE(WORK)
-  !  
-    !            IF (info /= 0) THEN
-    !                PRINT *, "Error: Inverse computation failed for r=", r, " spin=", spin
-    !                RETURN
-    !            END IF
-    !        end do
-    !    end do
-  !  
-    !    ! Deallocate ipiv
-    !    DEALLOCATE(ipiv)
-    !END SUBROUTINE get_lesser_hybridisation
+
     
+    SUBROUTINE ComputeAdjoint(A, AdjA, N)
+        IMPLICIT NONE
+        INTEGER, INTENT(IN) :: N
+        COMPLEX*16, INTENT(IN) :: A(N, N)
+        COMPLEX*16, INTENT(OUT) :: AdjA(N, N)
+        INTEGER :: i, j
+    
+        ! Compute the adjoint of the complex matrix A
+        DO i = 1, N
+            DO j = 1, N
+                AdjA(j, i) = CONJG(A(i, j))
+            END DO
+        END DO
+    END SUBROUTINE ComputeAdjoint
 
 
   END MODULE MyModule
-
-
-
-
 
 
   MODULE MytestModule
