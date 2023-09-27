@@ -120,26 +120,30 @@ MODULE MyModule
         CHARACTER(LEN=*), INTENT(IN) :: filename
         INTEGER, INTENT(IN) :: num_orbitals, steps
         COMPLEX*16, INTENT(IN) :: object(:,:,:,:)
-        !real (8), INTENT(in) :: energy(:)
         INTEGER :: i, j, r
-        CHARACTER(50) :: filename_complete
-        
+        CHARACTER(80) :: filename_complete
+    
+        DO i = 1, num_orbitals
+            DO j = 1, num_orbitals
+                ! Generate the complete filename including path
+                WRITE(filename_complete, '(A,"_",I0,"_",I0,"_fortran.dat")') filename, i-1, j-1
 
-        do i = 1, num_orbitals
-            do j = 1, num_orbitals
-                WRITE(filename_complete, '(A,I0,A,I0,A)') filename, i-1, '_', j-1, '_fortran.dat'
-                print *, filename_complete
-                OPEN(10, FILE=filename_complete, STATUS='OLD', ACTION='READ')
+                PRINT *, "Writing to file: ", filename_complete
+    
+                ! Open the file for writing (creates a new file)
+                OPEN(10, FILE=filename_complete, STATUS='NEW', ACTION='WRITE')
+    
+                ! Write data to the file
                 DO r = 1, steps
-                    WRITE(10, *) real(object(r, 1, i, j)), &
-                                             AIMAG(object(r, 2, i, j))
+                    WRITE(10, *) REAL(object(r, 1, i, j)), AIMAG(object(r, 2, i, j))
                 END DO
+    
+                ! Close the file
+                CLOSE(10)
             END DO
         END DO
-    
-        ! Close the file
-        CLOSE(10)
     END SUBROUTINE
+    
     
 
 

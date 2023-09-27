@@ -32,7 +32,7 @@
     call ReadDataFromFile("se_lesser_", se_lesser, num_orbitals)
 
     call get_lesser_hybridisation(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, num_orbitals, steps)
-    
+    call WriteToFile("lesser_hybridisation_", lesser_hybridisation, num_orbitals, steps)
     DEALLOCATE(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation)
   END PROGRAM ComplexMatrixExample
   
