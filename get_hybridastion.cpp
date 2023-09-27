@@ -5,6 +5,7 @@
 #include <cmath>
 #include <string>
 #include <eigen3/Eigen/Dense>
+#include <iomanip>
 using namespace std;
 typedef std::complex<double> dcomp;
 
@@ -53,9 +54,9 @@ void get_hybridisation(int steps, int num_orbitals, std::vector<std::vector<Eige
             gf_advanced = gf_retarded.at(r).at(spin).adjoint();
             gf_advanced_inverse = gf_advanced.inverse();
             gf_retarded_inverse = gf_retarded.at(r).at(spin).inverse();
+            hybridisation_lesser.at(r).at(spin) = gf_retarded_inverse * gf_lesser.at(r).at(spin) * gf_advanced_inverse - se_lesser.at(r).at(spin);
 
-            hybridisation_lesser.at(r).at(spin) = gf_retarded_inverse * gf_lesser.at(r).at(spin) * gf_advanced_inverse - hybridisation_lesser.at(r).at(spin);
-        }
+       }
     }
 }
 
@@ -68,7 +69,7 @@ void print_to_file(int steps, int num_orbitals, std::vector<std::vector<Eigen::M
 			std::ofstream gf_local_file;
 			gf_local_file.open(var);
 			for (int r = 0; r < steps; r++) {
-				gf_local_file << energy.at(r) << "  " << object.at(r).at(0)(i, j).real() << "   " << object.at(r).at(0)(i, j).imag() << "\n";
+				gf_local_file << std::setprecision(15) << energy.at(r) << "  " << object.at(r).at(0)(i, j).real() << "   " << object.at(r).at(0)(i, j).imag() << "\n";
 			}
 			gf_local_file.close();	
         }
