@@ -38,49 +38,49 @@ MODULE MyModule
       END SUBROUTINE ReadDataFromFile  
 
 
-      SUBROUTINE get_lesser_hybridisation(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, num_orbitals, steps)
-        IMPLICIT NONE
-        
-        ! Define array dimensions
-        INTEGER, INTENT(IN) :: steps, num_orbitals
-        COMPLEX(8), INTENT(IN) :: gf_retarded(:,:,:,:),  gf_lesser(:,:,:,:), se_lesser(:,:,:,:)
-        COMPLEX(8), INTENT(OUT) :: lesser_hybridisation(:,:,:,:)
-    
-        ! Local variables
-        INTEGER :: info, r, spin
-        INTEGER, ALLOCATABLE :: ipiv(:)
-        COMPLEX(8), ALLOCATABLE :: WORK(:)
-        INTEGER :: LWORK  ! Local variable for workspace size
-    
-        ! Allocate memory for work arrays
-        ALLOCATE(ipiv(num_orbitals))
-    
-        do r = 1, steps
-            do spin = 1, 2
-                ! Query the optimal workspace size for each iteration
-                LWORK = -1
-                print *, "calling zgetri "
-                CALL zgetri(num_orbitals, gf_retarded(r, spin, :, :), num_orbitals, ipiv, WORK, LWORK, INFO)
-                LWORK = WORK(1)
-                print *, LWORK
-                ALLOCATE(WORK(LWORK))
-                
-                ! Perform matrix inversion
-                CALL zgetri(num_orbitals, gf_retarded(r, spin, :, :), num_orbitals, ipiv, WORK, LWORK, INFO)
-    
-                ! Deallocate workspace
-                DEALLOCATE(WORK)
-    
-                IF (info /= 0) THEN
-                    PRINT *, "Error: Inverse computation failed for r=", r, " spin=", spin
-                    RETURN
-                END IF
-            end do
-        end do
-    
-        ! Deallocate ipiv
-        DEALLOCATE(ipiv)
-    END SUBROUTINE get_lesser_hybridisation
+    !  SUBROUTINE get_lesser_hybridisation(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, num_orbitals, steps)
+    !    IMPLICIT NONE
+    !    
+    !    ! Define array dimensions
+    !    INTEGER, INTENT(IN) :: steps, num_orbitals
+    !    COMPLEX(8), INTENT(IN) :: gf_retarded(:,:,:,:),  gf_lesser(:,:,:,:), se_lesser(:,:,:,:)
+    !    COMPLEX(8), INTENT(OUT) :: lesser_hybridisation(:,:,:,:)
+  !  
+    !    ! Local variables
+    !    INTEGER :: info, r, spin
+    !    INTEGER, ALLOCATABLE :: ipiv(:)
+    !    COMPLEX(8), ALLOCATABLE :: WORK(:)
+    !    INTEGER :: LWORK  ! Local variable for workspace size
+  !  
+    !    ! Allocate memory for work arrays
+    !    ALLOCATE(ipiv(num_orbitals))
+  !  
+    !    do r = 1, steps
+    !        do spin = 1, 2
+    !            ! Query the optimal workspace size for each iteration
+    !            LWORK = -1
+    !            print *, "calling zgetri "
+    !            CALL zgetri(num_orbitals, gf_retarded(r, spin, :, :), num_orbitals, ipiv, WORK, LWORK, INFO)
+    !            LWORK = WORK(1)
+    !            print *, LWORK
+    !            ALLOCATE(WORK(LWORK))
+    !            
+    !            ! Perform matrix inversion
+    !            CALL zgetri(num_orbitals, gf_retarded(r, spin, :, :), num_orbitals, ipiv, WORK, LWORK, INFO)
+  !  
+    !            ! Deallocate workspace
+    !            DEALLOCATE(WORK)
+  !  
+    !            IF (info /= 0) THEN
+    !                PRINT *, "Error: Inverse computation failed for r=", r, " spin=", spin
+    !                RETURN
+    !            END IF
+    !        end do
+    !    end do
+  !  
+    !    ! Deallocate ipiv
+    !    DEALLOCATE(ipiv)
+    !END SUBROUTINE get_lesser_hybridisation
     
 
 
@@ -92,7 +92,130 @@ MODULE MyModule
 
 
   MODULE MytestModule
+    private
+
+    public :: initialize_and_invert_matrix
     CONTAINS
+    subroutine initialize_and_invert_matrix(M, A)
+        implicit none
+        integer, intent(in) :: M
+        complex*16, intent(inout), dimension(M, M) :: A
+        complex*16, allocatable, dimension(:) :: WORK
+        integer, allocatable, dimension(:) :: IPIV
+        integer i, j, info, error
+    
+        allocate(WORK(M), IPIV(M), stat=error)
+        if (error /= 0) then
+          print *, "error: not enough memory"
+          return
+        end if
+    
+        ! Definition of the test matrix A
+        do i = 1, M
+          do j = 1, M
+            if (j == i) then
+              A(i, j) = (1, 1)
+            else
+              A(i, j) = (2, 0)
+            end if
+          end do
+        end do
+    
+        call ZGETRF(M, M, A, M, IPIV, info)
+        if (info == 0) then
+          write(*,*) "LU factorization succeeded"
+        else
+          write(*,*) "LU factorization failed"
+        end if
+    
+        call ZGETRI(M, A, M, IPIV, WORK, M, info)
+        if (info == 0) then
+          write(*,*) "Matrix inversion succeeded"
+        else
+          write(*,*) "Matrix inversion failed"
+        end if
+    
+        ! Print the inverted matrix
+        do i = 1, M
+          do j = 1, M
+            write(*,*) A(i, j)
+          end do
+        end do
+    
+        deallocate(IPIV, WORK, stat=error)
+        if (error /= 0) then
+          print *, "error: failed to release memory"
+        end if
+      end subroutine initialize_and_invert_matrix
+    
+    subroutine initialize_and_invert(m, num_orbitals)
+        implicit none
+        real(8), intent(out) :: m(:,:)
+        integer, intent(in) :: num_orbitals
+        integer i, j
+        integer :: info
+        integer, allocatable :: ipiv(:)
+        real(8), allocatable :: work(:)
+        integer :: LWORK
+        real(8) :: real_LWORK
+    
+        ! Allocate memory for workspace and pivot arrays
+        allocate(ipiv(num_orbitals))
+        
+        ! Initialize the matrix
+        do i = 1, num_orbitals
+            do j = 1, num_orbitals
+                m(i, j) = real(i + j, 8)
+                write(*, *) m(i, j) 
+            end do
+        end do
+    
+        ! Query the optimal workspace size for LAPACK matrix inversion
+        LWORK = -1
+        call dgetrf(num_orbitals, num_orbitals, m, num_orbitals, ipiv, info)
+        print *, "here"
+        ! Check for errors during factorization
+        if (info /= 0) then
+            print *, "Error: LU factorization failed. INFO =", info
+            return
+        end if
+        
+        ! Query the workspace size
+        real_LWORK = 0.0  ! Initialize to zero
+        print *, "trying to invert"
+        call dgetri(num_orbitals, m, num_orbitals, ipiv, work, LWORK, info)
+        print *, "tried the first inversion"
+        if (info /= 0) then
+            ! If LWORK is too small, requery with the correct size
+            LWORK = int(real_LWORK) + 1
+            allocate(work(LWORK))
+        else
+            ! LWORK is already correct, allocate workspace
+            allocate(work(LWORK))
+        end if
+        print *, "here"
+        ! Perform matrix inversion using LAPACK
+        call dgetri(num_orbitals, m, num_orbitals, ipiv, work, LWORK, info)
+    
+        ! Deallocate workspace and pivot array
+        deallocate(work)
+        deallocate(ipiv)
+        
+        ! Check for errors during matrix inversion
+        if (info /= 0) then
+            print *, "Error: Matrix inversion failed. INFO =", info
+        end if
+    
+        do i = 1, num_orbitals
+            do j = 1, num_orbitals
+                write(*, *) m(i, j) 
+            end do
+        end do
+    end subroutine initialize_and_invert
+    
+    
+
+
 
     SUBROUTINE initialize_mat(a, b, steps, num_orbitals)
         IMPLICIT NONE
