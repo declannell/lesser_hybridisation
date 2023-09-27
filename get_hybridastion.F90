@@ -13,27 +13,27 @@
     IMPLICIT NONE
     integer, parameter :: dp = selected_real_kind(15, 307)
     integer, parameter :: steps = 200     ! Update with the desired number of steps    
-    INTEGER, PARAMETER :: num_orbitals = 2
+    integer, PARAMETER :: num_orbitals = 2
     COMPLEX*16, ALLOCATABLE :: gf_retarded(:, :, :,:), gf_lesser(:, :, :, :), se_lesser(:, :, :, :), lesser_hybridisation(:,:,:,:)
-    
+    REAL(8), DIMENSION(:), ALLOCATABLE :: energy
 
     ! Allocate memory for the complex matrix
     ALLOCATE(gf_retarded(steps, 2, num_orbitals, num_orbitals), gf_lesser(steps, 2, num_orbitals, num_orbitals))
     ALLOCATE(se_lesser(steps, 2, num_orbitals, num_orbitals), lesser_hybridisation(steps, 2, num_orbitals, num_orbitals))
-    !allocate(m(num_orbitals, num_orbitals))
+    allocate(energy(steps))
 
 
     !call initialize_and_invert(m, num_orbitals)
     !call initialize_mat(a, b, steps, num_orbitals)
     !call multiple_mat(c, a, b, steps)
     !call PrintMatrix(c, steps, num_orbitals)
-    call ReadDataFromFile("gf_retarded_", gf_retarded, num_orbitals)
-    call ReadDataFromFile("gf_lesser_", gf_lesser, num_orbitals)
-    call ReadDataFromFile("se_lesser_", se_lesser, num_orbitals)
+    call ReadDataFromFile("gf_retarded_", gf_retarded, num_orbitals, energy)
+    call ReadDataFromFile("gf_lesser_", gf_lesser, num_orbitals, energy)
+    call ReadDataFromFile("se_lesser_", se_lesser, num_orbitals, energy)
 
     call get_lesser_hybridisation(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, num_orbitals, steps)
-    call WriteToFile("lesser_hybridisation_", lesser_hybridisation, num_orbitals, steps)
-    DEALLOCATE(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation)
+    call WriteToFile("lesser_hybridisation_", lesser_hybridisation, num_orbitals, steps, energy)
+    deallocate(gf_retarded, gf_lesser, se_lesser, lesser_hybridisation, energy)
   END PROGRAM ComplexMatrixExample
   
 

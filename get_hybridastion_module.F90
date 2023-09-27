@@ -27,14 +27,14 @@ MODULE MyModule
     END SUBROUTINE get_lesser_hybridisation
 
 
-    SUBROUTINE ReadDataFromFile(filename, A, num_orbitals)
+    SUBROUTINE ReadDataFromFile(filename, A, num_orbitals, energy)
         IMPLICIT NONE
         CHARACTER(LEN=*), INTENT(IN) :: filename
         CHARACTER(50) :: filename_complete
         INTEGER, INTENT(IN) :: num_orbitals
         COMPLEX*16, INTENT(OUT) :: A(:,:,:,:)
-        !real (8), INTENT(out) :: energy(:)
-        real(8) energy, real_part, imag_part
+        real (8), INTENT(out) :: energy(:)
+        real(8) real_part, imag_part
         INTEGER :: i, j, r = 1, ios
         LOGICAL :: end_of_file
       
@@ -46,7 +46,7 @@ MODULE MyModule
               print *, filename_complete
                 OPEN(10, FILE=filename_complete, STATUS='OLD', ACTION='READ')
                 DO WHILE (.TRUE.)
-                    READ(10, *, IOSTAT=ios) energy, real_part, imag_part
+                    READ(10, *, IOSTAT=ios) energy(r), real_part, imag_part
                     ! Check for end of file
                     IF (ios /= 0) THEN
                         end_of_file = .TRUE.
@@ -55,7 +55,7 @@ MODULE MyModule
                     A(r, 1, i, j) = CMPLX(real_part, imag_part, 8)
                     A(r, 2, i, j) = CMPLX(real_part, imag_part, 8)
                     if (r == 1 .and. filename == "gf_retarded_") then
-                        PRINT *, "Energy:", energy, "Real:", real_part, "Imag:", imag_part, "r: ", r,&
+                        PRINT *, "Energy:", energy(r), "Real:", real_part, "Imag:", imag_part, "r: ", r,&
                             "A(r, 1, i, j): ", A(r, 1, i, j)
                     end if
  
@@ -115,11 +115,12 @@ MODULE MyModule
     END SUBROUTINE ComputeAdjoint
 
 
-    SUBROUTINE WriteToFile(filename, object, num_orbitals, steps)
+    SUBROUTINE WriteToFile(filename, object, num_orbitals, steps, energy)
         IMPLICIT NONE
         CHARACTER(LEN=*), INTENT(IN) :: filename
         INTEGER, INTENT(IN) :: num_orbitals, steps
         COMPLEX*16, INTENT(IN) :: object(:,:,:,:)
+        real (8), intent(in) ::energy(:)
         INTEGER :: i, j, r
         CHARACTER(80) :: filename_complete
     
@@ -131,11 +132,11 @@ MODULE MyModule
                 PRINT *, "Writing to file: ", filename_complete
     
                 ! Open the file for writing (creates a new file)
-                OPEN(10, FILE=filename_complete, STATUS='NEW', ACTION='WRITE')
+                OPEN(10, FILE=filename_complete, STATUS='REPLACE', ACTION='WRITE')
     
                 ! Write data to the file
                 DO r = 1, steps
-                    WRITE(10, *) REAL(object(r, 1, i, j)), AIMAG(object(r, 2, i, j))
+                    WRITE(10, *) energy(r), REAL(object(r, 1, i, j)), AIMAG(object(r, 2, i, j))
                 END DO
     
                 ! Close the file
